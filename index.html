@@ -48,6 +48,10 @@ cursor:pointer;
 height:300px;
 }
 
+.big{
+font-size:26px;
+}
+
 </style>
 
 </head>
@@ -57,12 +61,20 @@ height:300px;
 
 <div class="card">
 
+<h3>Overview</h3>
+
+<div class="big" id="overview">-</div>
+
+</div>
+
+<div class="card">
+
 <h3>Ny måling</h3>
 
-<input id="weightInput" placeholder="Vægt">
-<input id="chestInput" placeholder="Bryst">
-<input id="waistInput" placeholder="Mave">
-<input id="bicepsInput" placeholder="Biceps">
+<input id="weight" placeholder="Vægt">
+<input id="chest" placeholder="Bryst">
+<input id="waist" placeholder="Mave">
+<input id="biceps" placeholder="Biceps">
 
 <button onclick="save()">Gem</button>
 
@@ -74,7 +86,7 @@ height:300px;
 
 <h3>Historik</h3>
 
-<div id="history">Loader...</div>
+<div id="history"></div>
 
 </div>
 
@@ -90,7 +102,8 @@ height:300px;
 
 <script>
 
-const API_URL="https://script.google.com/macros/s/AKfycbw-tJfqu9tdmpTroa_lFtNSfW8b37fnzwimU60bff2ldzZYjSm5SoXaMsukIeUx-YMW/exec";
+const API =
+"https://script.google.com/macros/s/AKfycbw-tJfqu9tdmpTroa_lFtNSfW8b37fnzwimU60bff2ldzZYjSm5SoXaMsukIeUx-YMW/exec";
 
 let chart;
 
@@ -98,59 +111,51 @@ let chart;
 
 async function save()
 {
-status.innerHTML="Gemmer...";
-
-const url=
-API_URL+
-"?weight="+encodeURIComponent(weightInput.value)+
-"&chest="+encodeURIComponent(chestInput.value)+
-"&waist="+encodeURIComponent(waistInput.value)+
-"&biceps="+encodeURIComponent(bicepsInput.value)+
+const url =
+API +
+"?weight="+weight.value+
+"&chest="+chest.value+
+"&waist="+waist.value+
+"&biceps="+biceps.value+
 "&t="+Date.now();
 
-try{
+status.innerHTML="Gemmer...";
 
-await fetch(url,{redirect:"follow"});
+await fetch(url);
 
 status.innerHTML="Gemt";
 
 load();
-
-}catch(e){
-
-status.innerHTML="FEJL";
-console.log(e);
-
-}
 }
 
 /* LOAD */
 
 async function load()
 {
-try{
+const res = await fetch(API+"?t="+Date.now());
 
-const response=
-await fetch(API_URL+"?t="+Date.now(),{
-redirect:"follow"
-});
+const data = await res.json();
 
-const data=
-await response.json();
+console.log(data);
 
-console.log("DATA:",data);
-
+showOverview(data);
 showHistory(data);
-
-drawChart(data);
-
-}catch(e){
-
-history.innerHTML="FEJL LOADING";
-
-console.log(e);
-
+showChart(data);
 }
+
+/* OVERVIEW */
+
+function showOverview(data)
+{
+if(data.length<2)return;
+
+const last=data[data.length-1];
+
+overview.innerHTML =
+"Vægt: "+last[1]+
+" | Bryst: "+last[2]+
+" | Mave: "+last[3]+
+" | Biceps: "+last[4];
 }
 
 /* HISTORY */
@@ -161,7 +166,7 @@ let html="";
 
 for(let i=data.length-1;i>=1;i--)
 {
-html+=
+html +=
 new Date(data[i][0]).toLocaleDateString()+
 " | "+data[i][1]+"<br>";
 }
@@ -171,30 +176,36 @@ history.innerHTML=html;
 
 /* CHART */
 
-function drawChart(data)
+function showChart(data)
 {
-const ctx=document.getElementById("chart").getContext("2d");
-
 const labels=[];
-const weight=[];
+const values=[];
 
 for(let i=1;i<data.length;i++)
 {
-labels.push(new Date(data[i][0]).toLocaleDateString());
-weight.push(data[i][1]);
+labels.push(
+new Date(data[i][0]).toLocaleDateString()
+);
+
+values.push(data[i][1]);
 }
 
 if(chart)chart.destroy();
 
-chart=new Chart(ctx,{
+chart=new Chart(
+document.getElementById("chart"),
+{
 type:"line",
+
 data:{
-labels,
+labels:labels,
+
 datasets:[{
 label:"Vægt",
-data:weight
+data:values
 }]
 },
+
 options:{
 maintainAspectRatio:false
 }
