@@ -202,22 +202,44 @@ setCard("biceps",last[4],prev[4]);
 
 function setCard(name,current,previous)
 {
-document.getElementById(name+"Value").innerHTML=current;
+    const valueEl =
+        document.getElementById(name+"Value");
 
-const diff=current-previous;
+    const changeEl =
+        document.getElementById(name+"Change");
 
-let text="";
+    const unit = name==="weight" ? "kg" : "cm";
+    valueEl.innerHTML=current+" "+unit;
 
-if(diff>0)
-text="▲ "+diff;
+    const diff = current - previous;
 
-else if(diff<0)
-text="▼ "+diff;
+    if(diff===0)
+    {
+        changeEl.innerHTML="Ingen ændring";
+        changeEl.style.color="#94a3b8";
+        return;
+    }
 
-else
-text="Ingen ændring";
+    let arrow = diff>0 ? "▲ " : "▼ ";
+    let absDiff = Math.abs(diff);
 
-document.getElementById(name+"Change").innerHTML=text;
+    changeEl.innerHTML =
+        arrow + absDiff;
+
+    /* LOGIK */
+
+    if(name==="weight")
+    {
+        /* vægt ned = grøn */
+        changeEl.style.color =
+            diff<0 ? "#22c55e" : "#ef4444";
+    }
+    else
+    {
+        /* bryst, mave, biceps op = grøn */
+        changeEl.style.color =
+            diff>0 ? "#22c55e" : "#ef4444";
+    }
 }
 
 /* CHART */
