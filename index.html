@@ -7,8 +7,6 @@
 
 <title>Træning Dashboard</title>
 
-<link rel="icon" href="data:,">
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -18,33 +16,14 @@ font-family:Segoe UI;
 background:#0f172a;
 color:white;
 margin:0;
-}
-
-.header{
-background:#020617;
 padding:20px;
-font-size:22px;
-}
-
-.container{
-padding:30px;
-}
-
-.grid{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
-gap:20px;
 }
 
 .card{
 background:#1e293b;
 padding:20px;
+margin-bottom:20px;
 border-radius:8px;
-}
-
-.big{
-font-size:28px;
-margin-top:10px;
 }
 
 input{
@@ -74,66 +53,34 @@ height:300px;
 </head>
 <body>
 
-<div class="header">
-Træning Dashboard
-</div>
-
-<div class="container">
-
-<!-- OVERVIEW -->
-
-<div class="grid">
-
-<div class="card">
-Vægt
-<div class="big" id="weightOverview">-</div>
-</div>
-
-<div class="card">
-Bryst
-<div class="big" id="chestOverview">-</div>
-</div>
-
-<div class="card">
-Mave
-<div class="big" id="waistOverview">-</div>
-</div>
-
-<div class="card">
-Biceps
-<div class="big" id="bicepsOverview">-</div>
-</div>
-
-</div>
-
-<br>
-
-<!-- INPUT -->
+<h2>Træning Dashboard</h2>
 
 <div class="card">
 
 <h3>Ny måling</h3>
 
-<input id="weightInput" placeholder="Vægt (kg)">
-<input id="chestInput" placeholder="Bryst (cm)">
-<input id="waistInput" placeholder="Mave (cm)">
-<input id="bicepsInput" placeholder="Biceps (cm)">
+<input id="weightInput" placeholder="Vægt">
+<input id="chestInput" placeholder="Bryst">
+<input id="waistInput" placeholder="Mave">
+<input id="bicepsInput" placeholder="Biceps">
 
-<button onclick="saveMeasurements()">
-Gem
-</button>
+<button onclick="save()">Gem</button>
 
 <div id="status"></div>
 
 </div>
 
-<br>
+<div class="card">
 
-<!-- GRAPH -->
+<h3>Historik</h3>
+
+<div id="history">Loader...</div>
+
+</div>
 
 <div class="card">
 
-<h3>Udvikling</h3>
+<h3>Graf</h3>
 
 <div class="chart-container">
 <canvas id="chart"></canvas>
@@ -141,32 +88,15 @@ Gem
 
 </div>
 
-<br>
-
-<!-- HISTORY -->
-
-<div class="card">
-
-<h3>Historik</h3>
-
-<div id="history">
-Loader...
-</div>
-
-</div>
-
-</div>
-
 <script>
 
-const API_URL=
-"https://script.google.com/macros/s/AKfycbw-tJfqu9tdmpTroa_lFtNSfW8b37fnzwimU60bff2ldzZYjSm5SoXaMsukIeUx-YMW/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbw-tJfqu9tdmpTroa_lFtNSfW8b37fnzwimU60bff2ldzZYjSm5SoXaMsukIeUx-YMW/exec";
 
-let chartInstance;
+let chart;
 
 /* SAVE */
 
-async function saveMeasurements()
+async function save()
 {
 status.innerHTML="Gemmer...";
 
@@ -178,60 +108,62 @@ API_URL+
 "&biceps="+encodeURIComponent(bicepsInput.value)+
 "&t="+Date.now();
 
-await fetch(url);
+try{
+
+await fetch(url,{redirect:"follow"});
 
 status.innerHTML="Gemt";
 
-loadData();
+load();
+
+}catch(e){
+
+status.innerHTML="FEJL";
+console.log(e);
+
+}
 }
 
 /* LOAD */
 
-async function loadData()
+async function load()
 {
+try{
+
 const response=
-await fetch(API_URL+"?t="+Date.now());
+await fetch(API_URL+"?t="+Date.now(),{
+redirect:"follow"
+});
 
 const data=
 await response.json();
 
-updateOverview(data);
-updateHistory(data);
-updateChart(data);
+console.log("DATA:",data);
+
+showHistory(data);
+
+drawChart(data);
+
+}catch(e){
+
+history.innerHTML="FEJL LOADING";
+
+console.log(e);
+
 }
-
-/* OVERVIEW */
-
-function updateOverview(data)
-{
-if(data.length<=1)return;
-
-const last=data[data.length-1];
-
-weightOverview.innerHTML=last[1]+" kg";
-chestOverview.innerHTML=last[2]+" cm";
-waistOverview.innerHTML=last[3]+" cm";
-bicepsOverview.innerHTML=last[4]+" cm";
 }
 
 /* HISTORY */
 
-function updateHistory(data)
+function showHistory(data)
 {
 let html="";
 
 for(let i=data.length-1;i>=1;i--)
 {
-const date=
-new Date(data[i][0])
-.toLocaleDateString("da-DK");
-
 html+=
-date+" | "+
-data[i][1]+" kg | "+
-data[i][2]+" cm | "+
-data[i][3]+" cm | "+
-data[i][4]+" cm<br>";
+new Date(data[i][0]).toLocaleDateString()+
+" | "+data[i][1]+"<br>";
 }
 
 history.innerHTML=html;
@@ -239,48 +171,30 @@ history.innerHTML=html;
 
 /* CHART */
 
-function updateChart(data)
+function drawChart(data)
 {
-const ctx=
-document.getElementById("chart").getContext("2d");
+const ctx=document.getElementById("chart").getContext("2d");
 
 const labels=[];
 const weight=[];
-const chest=[];
-const waist=[];
-const biceps=[];
 
 for(let i=1;i<data.length;i++)
 {
-labels.push(
-new Date(data[i][0])
-.toLocaleDateString("da-DK")
-);
-
+labels.push(new Date(data[i][0]).toLocaleDateString());
 weight.push(data[i][1]);
-chest.push(data[i][2]);
-waist.push(data[i][3]);
-biceps.push(data[i][4]);
 }
 
-if(chartInstance)
-chartInstance.destroy();
+if(chart)chart.destroy();
 
-chartInstance=
-new Chart(ctx,{
+chart=new Chart(ctx,{
 type:"line",
-
 data:{
 labels,
-
-datasets:[
-{label:"Vægt",data:weight},
-{label:"Bryst",data:chest},
-{label:"Mave",data:waist},
-{label:"Biceps",data:biceps}
-]
+datasets:[{
+label:"Vægt",
+data:weight
+}]
 },
-
 options:{
 maintainAspectRatio:false
 }
@@ -289,7 +203,7 @@ maintainAspectRatio:false
 
 /* INIT */
 
-loadData();
+load();
 
 </script>
 
