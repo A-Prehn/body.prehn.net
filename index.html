@@ -11,74 +11,42 @@
 <style>
 
 body {
-    font-family: Segoe UI, Arial;
-    margin: 0;
+    font-family: Segoe UI;
     background: #0f172a;
     color: white;
-}
-
-.header {
-    background: #020617;
-    padding: 20px;
-    font-size: 22px;
 }
 
 .container {
     padding: 30px;
 }
 
-.grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 20px;
-}
-
 .card {
     background: #1e293b;
     padding: 20px;
+    margin-bottom: 20px;
     border-radius: 8px;
-}
-
-.big {
-    font-size: 28px;
 }
 
 input {
     width: 100%;
-    padding: 6px;
+    padding: 8px;
+    margin-top: 5px;
     background: #020617;
     border: 1px solid #334155;
     color: white;
 }
 
 button {
+    margin-top: 10px;
+    padding: 10px 20px;
     background: #1f7a6b;
     border: none;
-    padding: 10px 20px;
     color: white;
-    border-radius: 4px;
     cursor: pointer;
-    margin-top: 10px;
-    margin-right: 10px;
-}
-
-button:hover {
-    background: #145a4f;
 }
 
 .chart-container {
     height: 300px;
-}
-
-.history-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.history-table th,
-.history-table td {
-    padding: 10px;
-    border-bottom: 1px solid #334155;
 }
 
 </style>
@@ -86,75 +54,33 @@ button:hover {
 </head>
 <body>
 
-<div class="header">
-Træning Dashboard (Google Sheets)
-</div>
-
 <div class="container">
 
-<div class="grid">
-
 <div class="card">
-<h3>Vægt</h3>
-<div class="big" id="weightDisplay">-</div>
+
+<h2>Kropsmål</h2>
+
+<label>Vægt</label>
+<input id="weightInput">
+
+<label>Bryst</label>
+<input id="chestInput">
+
+<label>Mave</label>
+<input id="waistInput">
+
+<label>Biceps</label>
+<input id="bicepsInput">
+
+<button onclick="saveMeasurements()">
+Gem
+</button>
+
 </div>
 
 <div class="card">
-<h3>Bryst</h3>
-<div class="big" id="chestDisplay">-</div>
-</div>
 
-<div class="card">
-<h3>Mave</h3>
-<div class="big" id="waistDisplay">-</div>
-</div>
-
-<div class="card">
-<h3>Biceps</h3>
-<div class="big" id="bicepsDisplay">-</div>
-</div>
-
-</div>
-
-<br>
-
-<div class="card">
-
-<h3>Opdater kropsmål</h3>
-
-<table>
-
-<tr>
-<td>Vægt</td>
-<td><input id="weightInput" type="number"></td>
-</tr>
-
-<tr>
-<td>Bryst</td>
-<td><input id="chestInput" type="number"></td>
-</tr>
-
-<tr>
-<td>Mave</td>
-<td><input id="waistInput" type="number"></td>
-</tr>
-
-<tr>
-<td>Biceps</td>
-<td><input id="bicepsInput" type="number"></td>
-</tr>
-
-</table>
-
-<button onclick="saveMeasurements()">Gem i Google Sheets</button>
-
-</div>
-
-<br>
-
-<div class="card">
-
-<h3>Udvikling</h3>
+<h2>Graf</h2>
 
 <div class="chart-container">
 <canvas id="chart"></canvas>
@@ -162,13 +88,13 @@ Træning Dashboard (Google Sheets)
 
 </div>
 
-<br>
-
 <div class="card">
 
-<h3>Historik</h3>
+<h2>Historik</h2>
 
-<div id="history">Loader...</div>
+<div id="history">
+Loader...
+</div>
 
 </div>
 
@@ -181,40 +107,44 @@ const API_URL =
 
 let chart;
 
-/* GEM */
+/* SAVE */
 
 function saveMeasurements()
 {
-    let weight = weightInput.value;
-    let chest = chestInput.value;
-    let waist = waistInput.value;
-    let biceps = bicepsInput.value;
+    const formData =
+        new FormData();
+
+    formData.append(
+        "weight",
+        weightInput.value
+    );
+
+    formData.append(
+        "chest",
+        chestInput.value
+    );
+
+    formData.append(
+        "waist",
+        waistInput.value
+    );
+
+    formData.append(
+        "biceps",
+        bicepsInput.value
+    );
 
     fetch(API_URL,
     {
         method: "POST",
-
-        headers:
-        {
-            "Content-Type": "application/json"
-        },
-
-        body: JSON.stringify({
-            weight,
-            chest,
-            waist,
-            biceps
-        })
-
-    })
-    .then(r => r.text())
-    .then(() =>
-    {
-        loadData();
+        mode: "no-cors",
+        body: formData
     });
+
+    setTimeout(loadData, 1000);
 }
 
-/* HENT DATA */
+/* LOAD */
 
 function loadData()
 {
@@ -222,140 +152,76 @@ function loadData()
     .then(r => r.json())
     .then(data =>
     {
-        processData(data);
+        showHistory(data);
+        drawChart(data);
     });
 }
 
-/* PROCESS DATA */
+/* HISTORY */
 
-function processData(data)
+function showHistory(data)
 {
-    if (data.length <= 1)
-        return;
+    let html = "";
 
-    let labels = [];
-    let weight = [];
-    let chest = [];
-    let waist = [];
-    let biceps = [];
-
-    let html =
-    "<table class='history-table'>" +
-    "<tr>" +
-    "<th>Dato</th>" +
-    "<th>Vægt</th>" +
-    "<th>Bryst</th>" +
-    "<th>Mave</th>" +
-    "<th>Biceps</th>" +
-    "</tr>";
-
-    for (let i = 1; i < data.length; i++)
+    for(let i=1;i<data.length;i++)
     {
-        let row = data[i];
-
         let date =
-        new Date(row[0]).toLocaleDateString("da-DK");
-
-        labels.push(date);
-
-        weight.push(row[1]);
-        chest.push(row[2]);
-        waist.push(row[3]);
-        biceps.push(row[4]);
+        new Date(data[i][0])
+        .toLocaleDateString("da-DK");
 
         html +=
-        "<tr>" +
-        "<td>"+date+"</td>" +
-        "<td>"+row[1]+"</td>" +
-        "<td>"+row[2]+"</td>" +
-        "<td>"+row[3]+"</td>" +
-        "<td>"+row[4]+"</td>" +
-        "</tr>";
+        date + " | " +
+        data[i][1] + " kg<br>";
     }
 
-    html += "</table>";
-
     history.innerHTML = html;
-
-    weightDisplay.innerHTML =
-    weight.at(-1) + " kg";
-
-    chestDisplay.innerHTML =
-    chest.at(-1) + " cm";
-
-    waistDisplay.innerHTML =
-    waist.at(-1) + " cm";
-
-    bicepsDisplay.innerHTML =
-    biceps.at(-1) + " cm";
-
-    drawChart(labels, weight, chest, waist, biceps);
 }
 
-/* TEGN GRAF */
+/* CHART */
 
-function drawChart(labels, weight, chest, waist, biceps)
+function drawChart(data)
 {
-    if (chart)
+    let labels = [];
+    let weight = [];
+
+    for(let i=1;i<data.length;i++)
+    {
+        labels.push(
+            new Date(data[i][0])
+            .toLocaleDateString("da-DK")
+        );
+
+        weight.push(data[i][1]);
+    }
+
+    if(chart)
         chart.destroy();
 
     chart =
-    new Chart(chart,
-    {
-        type: "line",
-
-        data:
+    new Chart(
+        document.getElementById("chart"),
         {
-            labels,
+            type: "line",
 
-            datasets:
-            [
-                { label: "Vægt", data: weight },
-                { label: "Bryst", data: chest },
-                { label: "Mave", data: waist },
-                { label: "Biceps", data: biceps }
-            ]
-        },
-
-        options:
-        {
-            maintainAspectRatio: false,
-
-            plugins:
+            data:
             {
-                legend:
-                {
-                    labels:
-                    {
-                        color: "white"
-                    }
-                }
+                labels,
+
+                datasets:
+                [{
+                    label: "Vægt",
+                    data: weight
+                }]
             },
 
-            scales:
+            options:
             {
-                x:
-                {
-                    ticks:
-                    {
-                        color: "white"
-                    }
-                },
-
-                y:
-                {
-                    ticks:
-                    {
-                        color: "white"
-                    }
-                }
+                maintainAspectRatio:false
             }
-        }
-
-    });
+        });
 }
 
-/* LOAD VED START */
+/* INIT */
 
 loadData();
 
