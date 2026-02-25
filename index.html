@@ -1,17 +1,20 @@
 <!DOCTYPE html>
 <html lang="da">
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Træning Dashboard</title>
+
+<link rel="icon" href="data:,">
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 
 body {
-    font-family: Segoe UI;
+    font-family: Segoe UI, Arial;
     background: #0f172a;
     color: white;
     margin: 0;
@@ -51,6 +54,7 @@ input {
     background: #020617;
     border: 1px solid #334155;
     color: white;
+    border-radius: 4px;
 }
 
 button {
@@ -60,6 +64,11 @@ button {
     border: none;
     color: white;
     cursor: pointer;
+    border-radius: 4px;
+}
+
+button:hover {
+    background: #145a4f;
 }
 
 .chart-container {
@@ -111,13 +120,13 @@ Biceps
 
 <h3>Ny måling</h3>
 
-<input id="weightInput" placeholder="Vægt">
-<input id="chestInput" placeholder="Bryst">
-<input id="waistInput" placeholder="Mave">
-<input id="bicepsInput" placeholder="Biceps">
+<input id="weightInput" placeholder="Vægt (kg)">
+<input id="chestInput" placeholder="Bryst (cm)">
+<input id="waistInput" placeholder="Mave (cm)">
+<input id="bicepsInput" placeholder="Biceps (cm)">
 
 <button onclick="saveMeasurements()">
-Gem
+Gem i Google Sheets
 </button>
 
 </div>
@@ -157,7 +166,7 @@ Loader...
 const API_URL =
 "https://script.google.com/macros/s/AKfycbw-tJfqu9tdmpTroa_lFtNSfW8b37fnzwimU60bff2ldzZYjSm5SoXaMsukIeUx-YMW/exec";
 
-let chart;
+let chartInstance;
 
 /* SAVE */
 
@@ -179,26 +188,30 @@ function saveMeasurements()
     setTimeout(loadData,1000);
 }
 
-/* LOAD */
+/* LOAD DATA */
 
 function loadData()
 {
     fetch(API_URL)
     .then(r=>r.json())
     .then(data=>{
+
         updateOverview(data);
+
         showHistory(data);
+
         drawChart(data);
+
     });
 }
 
-/* OVERVIEW FIX */
+/* UPDATE OVERVIEW */
 
 function updateOverview(data)
 {
     if(data.length<=1) return;
 
-    let last=data[data.length-1];
+    const last=data[data.length-1];
 
     weightOverview.innerHTML =
         last[1]+" kg";
@@ -213,7 +226,7 @@ function updateOverview(data)
         last[4]+" cm";
 }
 
-/* HISTORY */
+/* SHOW HISTORY */
 
 function showHistory(data)
 {
@@ -221,7 +234,8 @@ function showHistory(data)
 
     for(let i=data.length-1;i>=1;i--)
     {
-        let date=new Date(data[i][0])
+        const date=
+            new Date(data[i][0])
             .toLocaleDateString("da-DK");
 
         html+=
@@ -235,7 +249,7 @@ function showHistory(data)
     history.innerHTML=html;
 }
 
-/* GRAPH */
+/* DRAW CHART (FIXED VERSION) */
 
 function drawChart(data)
 {
@@ -258,24 +272,82 @@ function drawChart(data)
         biceps.push(data[i][4]);
     }
 
-    if(chart)
-        chart.destroy();
+    const ctx =
+        document
+        .getElementById("chart")
+        .getContext("2d");
 
-    chart=new Chart(chart,{
-        type:"line",
-        data:{
-            labels,
-            datasets:[
-                {label:"Vægt",data:weight},
-                {label:"Bryst",data:chest},
-                {label:"Mave",data:waist},
-                {label:"Biceps",data:biceps}
-            ]
-        },
-        options:{
-            maintainAspectRatio:false
-        }
-    });
+    if(chartInstance)
+        chartInstance.destroy();
+
+    chartInstance =
+        new Chart(ctx,
+        {
+            type:"line",
+
+            data:
+            {
+                labels,
+
+                datasets:
+                [
+                    {
+                        label:"Vægt (kg)",
+                        data:weight
+                    },
+                    {
+                        label:"Bryst (cm)",
+                        data:chest
+                    },
+                    {
+                        label:"Mave (cm)",
+                        data:waist
+                    },
+                    {
+                        label:"Biceps (cm)",
+                        data:biceps
+                    }
+                ]
+            },
+
+            options:
+            {
+                responsive:true,
+
+                maintainAspectRatio:false,
+
+                plugins:
+                {
+                    legend:
+                    {
+                        labels:
+                        {
+                            color:"white"
+                        }
+                    }
+                },
+
+                scales:
+                {
+                    x:
+                    {
+                        ticks:
+                        {
+                            color:"white"
+                        }
+                    },
+
+                    y:
+                    {
+                        ticks:
+                        {
+                            color:"white"
+                        }
+                    }
+                }
+            }
+
+        });
 }
 
 /* INIT */
