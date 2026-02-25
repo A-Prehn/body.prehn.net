@@ -14,7 +14,7 @@
 <style>
 
 body {
-    font-family: Segoe UI, Arial;
+    font-family: Segoe UI;
     background: #0f172a;
     color: white;
     margin: 0;
@@ -44,17 +44,15 @@ body {
 
 .big {
     font-size: 28px;
-    margin-top: 10px;
 }
 
 input {
     width: 100%;
-    padding: 8px;
+    padding: 10px;
     margin-top: 5px;
     background: #020617;
     border: 1px solid #334155;
     color: white;
-    border-radius: 4px;
 }
 
 button {
@@ -64,11 +62,6 @@ button {
     border: none;
     color: white;
     cursor: pointer;
-    border-radius: 4px;
-}
-
-button:hover {
-    background: #145a4f;
 }
 
 .chart-container {
@@ -85,8 +78,6 @@ Træning Dashboard
 </div>
 
 <div class="container">
-
-<!-- OVERVIEW -->
 
 <div class="grid">
 
@@ -114,26 +105,24 @@ Biceps
 
 <br>
 
-<!-- INPUT -->
-
 <div class="card">
 
 <h3>Ny måling</h3>
 
-<input id="weightInput" placeholder="Vægt (kg)">
-<input id="chestInput" placeholder="Bryst (cm)">
-<input id="waistInput" placeholder="Mave (cm)">
-<input id="bicepsInput" placeholder="Biceps (cm)">
+<input id="weightInput" placeholder="Vægt">
+<input id="chestInput" placeholder="Bryst">
+<input id="waistInput" placeholder="Mave">
+<input id="bicepsInput" placeholder="Biceps">
 
 <button onclick="saveMeasurements()">
-Gem i Google Sheets
+Gem
 </button>
+
+<div id="status"></div>
 
 </div>
 
 <br>
-
-<!-- GRAPH -->
 
 <div class="card">
 
@@ -146,8 +135,6 @@ Gem i Google Sheets
 </div>
 
 <br>
-
-<!-- HISTORY -->
 
 <div class="card">
 
@@ -170,42 +157,64 @@ let chartInstance;
 
 /* SAVE */
 
-function saveMeasurements()
+async function saveMeasurements()
 {
-    const formData = new FormData();
+    status.innerHTML="Gemmer...";
 
-    formData.append("weight", weightInput.value);
-    formData.append("chest", chestInput.value);
-    formData.append("waist", waistInput.value);
-    formData.append("biceps", bicepsInput.value);
+    const formData=new FormData();
 
-    fetch(API_URL,{
-        method:"POST",
-        mode:"no-cors",
-        body:formData
-    });
+    formData.append("weight",weightInput.value);
+    formData.append("chest",chestInput.value);
+    formData.append("waist",waistInput.value);
+    formData.append("biceps",bicepsInput.value);
 
-    setTimeout(loadData,1000);
+    try
+    {
+        await fetch(API_URL,
+        {
+            method:"POST",
+            mode:"no-cors",
+            body:formData
+        });
+
+        status.innerHTML="Gemt";
+
+        setTimeout(loadData,1000);
+    }
+    catch(e)
+    {
+        status.innerHTML="Fejl ved gem";
+        console.error(e);
+    }
 }
 
-/* LOAD DATA */
+/* LOAD */
 
-function loadData()
+async function loadData()
 {
-    fetch(API_URL)
-    .then(r=>r.json())
-    .then(data=>{
+    try
+    {
+        const response=
+            await fetch(API_URL+"?t="+Date.now());
+
+        const data=
+            await response.json();
+
+        console.log("Data loaded:",data);
 
         updateOverview(data);
+        updateHistory(data);
+        updateChart(data);
 
-        showHistory(data);
-
-        drawChart(data);
-
-    });
+    }
+    catch(e)
+    {
+        console.error("Load error:",e);
+        history.innerHTML="Kunne ikke hente data";
+    }
 }
 
-/* UPDATE OVERVIEW */
+/* OVERVIEW */
 
 function updateOverview(data)
 {
@@ -213,33 +222,25 @@ function updateOverview(data)
 
     const last=data[data.length-1];
 
-    weightOverview.innerHTML =
-        last[1]+" kg";
-
-    chestOverview.innerHTML =
-        last[2]+" cm";
-
-    waistOverview.innerHTML =
-        last[3]+" cm";
-
-    bicepsOverview.innerHTML =
-        last[4]+" cm";
+    weightOverview.innerHTML=last[1]+" kg";
+    chestOverview.innerHTML=last[2]+" cm";
+    waistOverview.innerHTML=last[3]+" cm";
+    bicepsOverview.innerHTML=last[4]+" cm";
 }
 
-/* SHOW HISTORY */
+/* HISTORY */
 
-function showHistory(data)
+function updateHistory(data)
 {
     let html="";
 
     for(let i=data.length-1;i>=1;i--)
     {
         const date=
-            new Date(data[i][0])
-            .toLocaleDateString("da-DK");
+        new Date(data[i][0])
+        .toLocaleDateString("da-DK");
 
-        html+=
-        date+" | "+
+        html+=date+" | "+
         data[i][1]+" kg | "+
         data[i][2]+" cm | "+
         data[i][3]+" cm | "+
@@ -249,15 +250,18 @@ function showHistory(data)
     history.innerHTML=html;
 }
 
-/* DRAW CHART (FIXED VERSION) */
+/* CHART */
 
-function drawChart(data)
+function updateChart(data)
 {
-    let labels=[];
-    let weight=[];
-    let chest=[];
-    let waist=[];
-    let biceps=[];
+    const ctx=
+    document.getElementById("chart").getContext("2d");
+
+    const labels=[];
+    const weight=[];
+    const chest=[];
+    const waist=[];
+    const biceps=[];
 
     for(let i=1;i<data.length;i++)
     {
@@ -272,82 +276,32 @@ function drawChart(data)
         biceps.push(data[i][4]);
     }
 
-    const ctx =
-        document
-        .getElementById("chart")
-        .getContext("2d");
-
     if(chartInstance)
         chartInstance.destroy();
 
-    chartInstance =
-        new Chart(ctx,
+    chartInstance=
+    new Chart(ctx,
+    {
+        type:"line",
+
+        data:
         {
-            type:"line",
+            labels,
 
-            data:
-            {
-                labels,
+            datasets:
+            [
+                {label:"Vægt",data:weight},
+                {label:"Bryst",data:chest},
+                {label:"Mave",data:waist},
+                {label:"Biceps",data:biceps}
+            ]
+        },
 
-                datasets:
-                [
-                    {
-                        label:"Vægt (kg)",
-                        data:weight
-                    },
-                    {
-                        label:"Bryst (cm)",
-                        data:chest
-                    },
-                    {
-                        label:"Mave (cm)",
-                        data:waist
-                    },
-                    {
-                        label:"Biceps (cm)",
-                        data:biceps
-                    }
-                ]
-            },
-
-            options:
-            {
-                responsive:true,
-
-                maintainAspectRatio:false,
-
-                plugins:
-                {
-                    legend:
-                    {
-                        labels:
-                        {
-                            color:"white"
-                        }
-                    }
-                },
-
-                scales:
-                {
-                    x:
-                    {
-                        ticks:
-                        {
-                            color:"white"
-                        }
-                    },
-
-                    y:
-                    {
-                        ticks:
-                        {
-                            color:"white"
-                        }
-                    }
-                }
-            }
-
-        });
+        options:
+        {
+            maintainAspectRatio:false
+        }
+    });
 }
 
 /* INIT */
