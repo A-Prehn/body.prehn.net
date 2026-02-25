@@ -14,17 +14,34 @@ body {
     font-family: Segoe UI;
     background: #0f172a;
     color: white;
+    margin: 0;
+}
+
+.header {
+    background: #020617;
+    padding: 20px;
+    font-size: 22px;
 }
 
 .container {
     padding: 30px;
 }
 
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
+    gap: 20px;
+}
+
 .card {
     background: #1e293b;
     padding: 20px;
-    margin-bottom: 20px;
     border-radius: 8px;
+}
+
+.big {
+    font-size: 28px;
+    margin-top: 10px;
 }
 
 input {
@@ -54,23 +71,50 @@ button {
 </head>
 <body>
 
+<div class="header">
+Træning Dashboard
+</div>
+
 <div class="container">
+
+<!-- OVERVIEW -->
+
+<div class="grid">
+
+<div class="card">
+Vægt
+<div class="big" id="weightOverview">-</div>
+</div>
+
+<div class="card">
+Bryst
+<div class="big" id="chestOverview">-</div>
+</div>
+
+<div class="card">
+Mave
+<div class="big" id="waistOverview">-</div>
+</div>
+
+<div class="card">
+Biceps
+<div class="big" id="bicepsOverview">-</div>
+</div>
+
+</div>
+
+<br>
+
+<!-- INPUT -->
 
 <div class="card">
 
-<h2>Kropsmål</h2>
+<h3>Ny måling</h3>
 
-<label>Vægt</label>
-<input id="weightInput">
-
-<label>Bryst</label>
-<input id="chestInput">
-
-<label>Mave</label>
-<input id="waistInput">
-
-<label>Biceps</label>
-<input id="bicepsInput">
+<input id="weightInput" placeholder="Vægt">
+<input id="chestInput" placeholder="Bryst">
+<input id="waistInput" placeholder="Mave">
+<input id="bicepsInput" placeholder="Biceps">
 
 <button onclick="saveMeasurements()">
 Gem
@@ -78,9 +122,13 @@ Gem
 
 </div>
 
+<br>
+
+<!-- GRAPH -->
+
 <div class="card">
 
-<h2>Graf</h2>
+<h3>Udvikling</h3>
 
 <div class="chart-container">
 <canvas id="chart"></canvas>
@@ -88,9 +136,13 @@ Gem
 
 </div>
 
+<br>
+
+<!-- HISTORY -->
+
 <div class="card">
 
-<h2>Historik</h2>
+<h3>Historik</h3>
 
 <div id="history">
 Loader...
@@ -111,37 +163,20 @@ let chart;
 
 function saveMeasurements()
 {
-    const formData =
-        new FormData();
+    const formData = new FormData();
 
-    formData.append(
-        "weight",
-        weightInput.value
-    );
+    formData.append("weight", weightInput.value);
+    formData.append("chest", chestInput.value);
+    formData.append("waist", waistInput.value);
+    formData.append("biceps", bicepsInput.value);
 
-    formData.append(
-        "chest",
-        chestInput.value
-    );
-
-    formData.append(
-        "waist",
-        waistInput.value
-    );
-
-    formData.append(
-        "biceps",
-        bicepsInput.value
-    );
-
-    fetch(API_URL,
-    {
-        method: "POST",
-        mode: "no-cors",
-        body: formData
+    fetch(API_URL,{
+        method:"POST",
+        mode:"no-cors",
+        body:formData
     });
 
-    setTimeout(loadData, 1000);
+    setTimeout(loadData,1000);
 }
 
 /* LOAD */
@@ -149,40 +184,66 @@ function saveMeasurements()
 function loadData()
 {
     fetch(API_URL)
-    .then(r => r.json())
-    .then(data =>
-    {
+    .then(r=>r.json())
+    .then(data=>{
+        updateOverview(data);
         showHistory(data);
         drawChart(data);
     });
+}
+
+/* OVERVIEW FIX */
+
+function updateOverview(data)
+{
+    if(data.length<=1) return;
+
+    let last=data[data.length-1];
+
+    weightOverview.innerHTML =
+        last[1]+" kg";
+
+    chestOverview.innerHTML =
+        last[2]+" cm";
+
+    waistOverview.innerHTML =
+        last[3]+" cm";
+
+    bicepsOverview.innerHTML =
+        last[4]+" cm";
 }
 
 /* HISTORY */
 
 function showHistory(data)
 {
-    let html = "";
+    let html="";
 
-    for(let i=1;i<data.length;i++)
+    for(let i=data.length-1;i>=1;i--)
     {
-        let date =
-        new Date(data[i][0])
-        .toLocaleDateString("da-DK");
+        let date=new Date(data[i][0])
+            .toLocaleDateString("da-DK");
 
-        html +=
-        date + " | " +
-        data[i][1] + " kg<br>";
+        html+=
+        date+" | "+
+        data[i][1]+" kg | "+
+        data[i][2]+" cm | "+
+        data[i][3]+" cm | "+
+        data[i][4]+" cm<br>";
     }
 
-    history.innerHTML = html;
+    history.innerHTML=html;
 }
 
-/* CHART */
+/* GRAPH */
 
 function drawChart(data)
 {
-    let labels = [];
-    let weight = [];
+    let labels=[];
+    let weight=[];
+    let chest=[];
+    let waist=[];
+    let biceps=[];
 
     for(let i=1;i<data.length;i++)
     {
@@ -192,33 +253,29 @@ function drawChart(data)
         );
 
         weight.push(data[i][1]);
+        chest.push(data[i][2]);
+        waist.push(data[i][3]);
+        biceps.push(data[i][4]);
     }
 
     if(chart)
         chart.destroy();
 
-    chart =
-    new Chart(
-        document.getElementById("chart"),
-        {
-            type: "line",
-
-            data:
-            {
-                labels,
-
-                datasets:
-                [{
-                    label: "Vægt",
-                    data: weight
-                }]
-            },
-
-            options:
-            {
-                maintainAspectRatio:false
-            }
-        });
+    chart=new Chart(chart,{
+        type:"line",
+        data:{
+            labels,
+            datasets:[
+                {label:"Vægt",data:weight},
+                {label:"Bryst",data:chest},
+                {label:"Mave",data:waist},
+                {label:"Biceps",data:biceps}
+            ]
+        },
+        options:{
+            maintainAspectRatio:false
+        }
+    });
 }
 
 /* INIT */
