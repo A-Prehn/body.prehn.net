@@ -200,18 +200,22 @@ setCard("waist",last[3],prev[3]);
 setCard("biceps",last[4],prev[4]);
 }
 
-function setCard(name,current,previous)
+function setCard(type,current,previous)
 {
     const valueEl =
-        document.getElementById(name+"Value");
+        document.getElementById(type+"Value");
 
     const changeEl =
-        document.getElementById(name+"Change");
+        document.getElementById(type+"Change");
 
-    const unit = name==="weight" ? "kg" : "cm";
-    valueEl.innerHTML=current+" "+unit;
+    const unit =
+        type==="weight" ? "kg" : "cm";
 
-    const diff = current - previous;
+    valueEl.innerHTML =
+        current + " " + unit;
+
+    const diff =
+        Number(current) - Number(previous);
 
     if(diff===0)
     {
@@ -220,26 +224,31 @@ function setCard(name,current,previous)
         return;
     }
 
-    let arrow = diff>0 ? "▲ " : "▼ ";
-    let absDiff = Math.abs(diff);
+    const arrow =
+        diff>0 ? "▲ " : "▼ ";
 
     changeEl.innerHTML =
-        arrow + absDiff;
+        arrow + Math.abs(diff);
 
-    /* LOGIK */
+    /* DEFINER HVAD ER GODT */
 
-    if(name==="weight")
+    const goodDirection =
     {
-        /* vægt ned = grøn */
-        changeEl.style.color =
-            diff<0 ? "#22c55e" : "#ef4444";
-    }
+        weight: "down",
+        chest: "up",
+        waist: "up",
+        biceps: "up"
+    };
+
+    let isGood;
+
+    if(goodDirection[type]==="down")
+        isGood = diff<0;
     else
-    {
-        /* bryst, mave, biceps op = grøn */
-        changeEl.style.color =
-            diff>0 ? "#22c55e" : "#ef4444";
-    }
+        isGood = diff>0;
+
+    changeEl.style.color =
+        isGood ? "#22c55e" : "#ef4444";
 }
 
 /* CHART */
