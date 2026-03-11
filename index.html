@@ -60,6 +60,8 @@ margin-top:5px;
 background:#020617;
 border:1px solid #334155;
 color:white;
+border-radius:6px;
+box-sizing:border-box;
 }
 
 button{
@@ -69,6 +71,7 @@ background:#1f7a6b;
 border:none;
 color:white;
 cursor:pointer;
+border-radius:6px;
 }
 
 .chart-container{
@@ -166,11 +169,23 @@ API+
 
 status.innerHTML="Gemmer...";
 
+try
+{
 await fetch(url);
+
+weight.value="";
+chest.value="";
+waist.value="";
+biceps.value="";
 
 status.innerHTML="Gemt";
 
 load();
+}
+catch(e)
+{
+status.innerHTML="Fejl – prøv igen";
+}
 }
 
 /* LOAD */
@@ -192,7 +207,7 @@ function updateOverview(data)
 if(data.length<2)return;
 
 const last=data[data.length-1];
-const prev=data.length>2?data[data.length-2]:last;
+const prev=data[data.length-2];
 
 setCard("weight",last[1],prev[1]);
 setCard("chest",last[2],prev[2]);
@@ -236,7 +251,7 @@ function setCard(type,current,previous)
     {
         weight: "down",
         chest: "up",
-        waist: "up",
+        waist: "down",
         biceps: "up"
     };
 
